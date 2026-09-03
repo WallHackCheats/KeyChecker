@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>KeyChecker</title>
+
+    <style>
+
+        /* =========================================================
+           CUSTOM FONT
+           ========================================================= */
+
+        @font-face {
+            font-family: "KeyCheckerFont";
+            src: url("assets/font.ttf") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
+
+        /* =========================================================
+           GLOBAL
+           ========================================================= */
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: "KeyCheckerFont", "Segoe UI", Arial, sans-serif;
+
+            color: white;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #300642 0%,
+                    #170a3b 50%,
+                    #041936 100%
+                );
+
+            user-select: none;
+
+            -webkit-user-select: none;
+
+            outline: none;
+        }
+
+
+        /* =========================================================
+           APPLICATION
+           ========================================================= */
+
+        #app {
+            position: relative;
+
+            width: 100vw;
+            height: 100vh;
+
+            min-width: 900px;
+            min-height: 600px;
+
+            overflow: hidden;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #300642 0%,
+                    #170a3b 50%,
+                    #041936 100%
+                );
+        }
+
+
+        /* =========================================================
+           TITLE
+           ========================================================= */
+
+        #title {
+            position: absolute;
+
+            top: 27px;
+            left: 0;
+
+            width: 100%;
+
+            text-align: center;
+
+            color: white;
+
+            font-size: 38px;
+            font-weight: bold;
+
+            line-height: 68px;
+
+            pointer-events: none;
+        }
+
+
+        /* =========================================================
+           KEYBOARD CANVAS
+           ========================================================= */
+
+        #keyboard {
+            position: absolute;
+
+            left: 25px;
+            top: 0;
+
+            width: 1135px;
+            height: 520px;
+
+            transform-origin: top left;
+        }
+
+
+        /* =========================================================
+           KEY
+           ========================================================= */
+
+        .key {
+            position: absolute;
+
+            height: 54px;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            padding: 0 5px;
+
+            color: white;
+
+            background: transparent;
+
+            border: 2px solid white;
+
+            border-radius: 20px;
+
+            font-family:
+                "KeyCheckerFont",
+                "Segoe UI",
+                Arial,
+                sans-serif;
+
+            font-size: 17px;
+
+            font-weight: bold;
+
+            white-space: nowrap;
+
+            transition:
+                background-color 0.04s linear,
+                color 0.04s linear,
+                transform 0.04s linear;
+        }
+
+
+        /* =========================================================
+           PRESSED KEY
+           ========================================================= */
+
+        .key.pressed {
+            background: white;
+
+            color: black;
+
+            border-color: white;
+        }
+
+
+        /* =========================================================
+           KEYBOARD AREA
+           ========================================================= */
+
+        #keyboard-wrapper {
+            position: absolute;
+
+            top: 0;
+            left: 0;
+
+            width: 100%;
+            height: 100%;
+
+            overflow: hidden;
+        }
+
+
+        /* =========================================================
+           SOCIAL BUTTONS
+           ========================================================= */
+
+        #social-buttons {
+            position: absolute;
+
+            left: 25px;
+            bottom: 14px;
+
+            display: flex;
+
+            gap: 10px;
+
+            z-index: 20;
+        }
+
+
+        .social-button {
+            width: 135px;
+            height: 46px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: flex-start;
+
+            padding: 0 8px 0 9px;
+
+            border: 2px solid white;
+
+            border-radius: 20px;
+
+            background:
+                rgba(22, 15, 50, 0.72);
+
+            color: white;
+
+            font-family:
+                "KeyCheckerFont",
+                "Segoe UI",
+                Arial,
+                sans-serif;
+
+            font-size: 15px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+
+            transition:
+                background-color 0.15s ease,
+                transform 0.15s ease;
+        }
+
+
+        .social-button:hover {
+            background:
+                rgba(255, 255, 255, 0.18);
+
+            transform: translateY(-1px);
+        }
+
+
+        .social-button:active {
+            transform: translateY(1px);
+        }
+
+
+        .social-button img {
+            width: 28px;
+            height: 28px;
+
+            object-fit: contain;
+
+            margin-right: 5px;
+
+            flex-shrink: 0;
+        }
+
+
+        .social-button span {
+            flex: 1;
+
+            text-align: center;
+
+            padding-right: 2px;
+        }
+
+
+        /* =========================================================
+           COPYRIGHT
+           ========================================================= */
+
+        #copyright {
+            position: absolute;
+
+            right: 22px;
+            bottom: 12px;
+
+            height: 30px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: flex-end;
+
+            color: white;
+
+            font-size: 15px;
+
+            font-weight: normal;
+
+            pointer-events: none;
+        }
+
+
+        /* =========================================================
+           RESPONSIVE KEYBOARD SCALING
+           ========================================================= */
+
+        @media (max-width: 1200px) {
+
+            #keyboard {
+                transform: scale(
+                    calc(
+                        (100vw - 35px) / 1135
+                    )
+                );
+            }
+
+        }
+
+
+        @media (max-height: 620px) {
+
+            #keyboard {
+                transform: scale(
+                    calc(
+                        (100vh - 95px) / 520
+                    )
+                );
+            }
+
+        }
+
+
+        /* =========================================================
+           VERY SMALL WINDOWS
+           ========================================================= */
+
+        @media (max-width: 950px) {
+
+            html,
+            body {
+                overflow: auto;
+            }
+
+            #app {
+                min-width: 900px;
+                min-height: 600px;
+            }
+
+        }
+
+    </style>
+</head>
+
+
+<body>
+
+    <main id="app">
+
+        <!-- =====================================================
+             TITLE
+             ===================================================== -->
+
+        <div id="title">
+            KeyChecker
+        </div>
+
+
+        <!-- =====================================================
+             KEYBOARD
+             ===================================================== -->
+
+        <div id="keyboard-wrapper">
+
+            <div id="keyboard"></div>
+
+        </div>
+
+
+        <!-- =====================================================
+             SOCIAL BUTTONS
+             ===================================================== -->
+
+        <div id="social-buttons">
+
+            <button
+                class="social-button"
+                data-url="https://github.com/WallHackCheats"
+                type="button"
+            >
+                <img
+                    src="github.png"
+                    alt="GitHub"
+                >
+
+                <span>Github</span>
+            </button>
+
+
+            <button
+                class="social-button"
+                data-url="https://x.com/TwistedGamingX1"
+                type="button"
+            >
+                <img
+                    src="discord.png"
+                    alt="Discord"
+                >
+
+                <span>Discord</span>
+            </button>
+
+
+            <button
+                class="social-button"
+                data-url="https://www.youtube.com/@TwistedGamingOfficial1"
+                type="button"
+            >
+                <img
+                    src="youtube.png"
+                    alt="YouTube"
+                >
+
+                <span>YouTube</span>
+            </button>
+
+        </div>
+
+
+        <!-- =====================================================
+             COPYRIGHT
+             ===================================================== -->
+
+        <div id="copyright">
+            WallHack © 2026 - Twisted0097
+        </div>
+
+    </main>
+
+
+    <script>
+
+        "use strict";
+
+
+        /* =========================================================
+           CONSTANTS
+           ========================================================= */
+
+        const KEY_HEIGHT = 54;
+
+        const KEY_SPACING = 6;
+
+        const KEY_RADIUS = 20;
+
+        const KEYBOARD_WIDTH = 1135;
+
+        const KEYBOARD_HEIGHT = 520;
+
+
+        /* =========================================================
+           KEYBOARD
+           ========================================================= */
+
+        const keyboard =
+            document.getElementById("keyboard");
+
+
+        /*
+         * Each object is equivalent to your C++
+         * KeyboardKey structure.
+         */
+
+        const keys = [];
+
+
+        /* =========================================================
+           ADD KEY
+           ========================================================= */
+
+        function addKey(
+            name,
+            code,
+            x,
+            y,
+            width
+        ) {
+
+            const key = {
+
+                name: name,
+
+                code: code,
+
+                x: x,
+
+                y: y,
+
+                width: width,
+
+                pressed: false,
+
+                element: null
+
+            };
+
+
+            keys.push(key);
+
+        }
+
+
+        /* =========================================================
+           CREATE KEYBOARD
+           ========================================================= */
+
+        function createKeyboard() {
+
+            keys.length = 0;
+
+
+            const K = 54;
+
+            const ROW_F = 125;
+
+            const ROW_NUMBER = 190;
+
+            const ROW_QWERTY = 250;
+
+            const ROW_HOME = 310;
+
+            const ROW_SHIFT = 370;
+
+            const ROW_BOTTOM = 430;
+
+            const START_X = 25;
+
+
+            let x;
+
+
+            /* =====================================================
+               FUNCTION KEYS
+               ===================================================== */
+
+            x = START_X;
+
+
+            addKey(
+                "ESC",
+                "Escape",
+                x,
+                ROW_F,
+                70
+            );
+
+
+            x += 86;
+
+
+            addKey("F1", "F1", x, ROW_F, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("F2", "F2", x, ROW_F, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("F3", "F3", x, ROW_F, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("F4", "F4", x, ROW_F, K);
+
+            x += K + 16;
+
+
+            addKey("F5", "F5", x, ROW_F, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("F6", "F6", x, ROW_F, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("F7", "F7", x, ROW_F, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("F8", "F8", x, ROW_F, K);
+
+            x += K + 16;
+
+
+            addKey("F9", "F9", x, ROW_F, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("F10", "F10", x, ROW_F, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("F11", "F11", x, ROW_F, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("F12", "F12", x, ROW_F, K);
+
+            x += K + 20;
+
+
+            addKey(
+                "PRINT",
+                "PrintScreen",
+                x,
+                ROW_F,
+                75
+            );
+
+
+            x += 81;
+
+
+            addKey(
+                "SCROLL",
+                "ScrollLock",
+                x,
+                ROW_F,
+                75
+            );
+
+
+            x += 81;
+
+
+            addKey(
+                "PAUSE",
+                "Pause",
+                x,
+                ROW_F,
+                75
+            );
+
+
+            /* =====================================================
+               NUMBER ROW
+               ===================================================== */
+
+            x = START_X;
+
+
+            addKey("`", "Backquote", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("1", "Digit1", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("2", "Digit2", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("3", "Digit3", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("4", "Digit4", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("5", "Digit5", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("6", "Digit6", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("7", "Digit7", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("8", "Digit8", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("9", "Digit9", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("0", "Digit0", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("-", "Minus", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey("=", "Equal", x, ROW_NUMBER, K);
+
+            x += K + KEY_SPACING;
+
+
+            addKey(
+                "BACKSPACE",
+                "Backspace",
+                x,
+                ROW_NUMBER,
+                108
+            );
+
+
+            /* =====================================================
+               QWERTY ROW
+               ===================================================== */
+
+            x = START_X;
+
+
+            addKey(
+                "TAB",
+                "Tab",
+                x,
+                ROW_QWERTY,
+                82
+            );
+
+
+            x += 88;
+
+
+            const qwertyKeys = [
+                ["Q", "KeyQ"],
+                ["W", "KeyW"],
+                ["E", "KeyE"],
+                ["R", "KeyR"],
+                ["T", "KeyT"],
+                ["Y", "KeyY"],
+                ["U", "KeyU"],
+                ["I", "KeyI"],
+                ["O", "KeyO"],
+                ["P", "KeyP"]
+            ];
+
+
+            for (const [name, code] of qwertyKeys) {
+
+                addKey(
+                    name,
+                    code,
+                    x,
+                    ROW_QWERTY,
+                    K
+                );
+
+                x += K + KEY_SPACING;
+
+            }
+
+
+            addKey(
+                "[",
+                "BracketLeft",
+                x,
+                ROW_QWERTY,
+                K
+            );
+
+
+            x += K + KEY_SPACING;
+
+
+            addKey(
+                "]",
+                "BracketRight",
+                x,
+                ROW_QWERTY,
+                K
+            );
+
+
+            x += K + KEY_SPACING;
+
+
+            addKey(
+                "\\",
+                "Backslash",
+                x,
+                ROW_QWERTY,
+                82
+            );
+
+
+            /* =====================================================
+               HOME ROW
+               ===================================================== */
+
+            x = START_X;
+
+
+            addKey(
+                "CAPS",
+                "CapsLock",
+                x,
+                ROW_HOME,
+                95
+            );
+
+
+            x += 101;
+
+
+            const homeKeys = [
+                ["A", "KeyA"],
+                ["S", "KeyS"],
+                ["D", "KeyD"],
+                ["F", "KeyF"],
+                ["G", "KeyG"],
+                ["H", "KeyH"],
+                ["J", "KeyJ"],
+                ["K", "KeyK"],
+                ["L", "KeyL"]
+            ];
+
+
+            for (const [name, code] of homeKeys) {
+
+                addKey(
+                    name,
+                    code,
+                    x,
+                    ROW_HOME,
+                    K
+                );
+
+                x += K + KEY_SPACING;
+
+            }
+
+
+            addKey(
+                ";",
+                "Semicolon",
+                x,
+                ROW_HOME,
+                K
+            );
+
+
+            x += K + KEY_SPACING;
+
+
+            addKey(
+                "'",
+                "Quote",
+                x,
+                ROW_HOME,
+                K
+            );
+
+
+            x += K + KEY_SPACING;
+
+
+            addKey(
+                "ENTER",
+                "Enter",
+                x,
+                ROW_HOME,
+                108
+            );
+
+
+            /* =====================================================
+               SHIFT ROW
+               ===================================================== */
+
+            x = START_X;
+
+
+            addKey(
+                "SHIFT",
+                "ShiftLeft",
+                x,
+                ROW_SHIFT,
+                125
+            );
+
+
+            x += 131;
+
+
+            const shiftKeys = [
+                ["Z", "KeyZ"],
+                ["X", "KeyX"],
+                ["C", "KeyC"],
+                ["V", "KeyV"],
+                ["B", "KeyB"],
+                ["N", "KeyN"],
+                ["M", "KeyM"]
+            ];
+
+
+            for (const [name, code] of shiftKeys) {
+
+                addKey(
+                    name,
+                    code,
+                    x,
+                    ROW_SHIFT,
+                    K
+                );
+
+                x += K + KEY_SPACING;
+
+            }
+
+
+            addKey(
+                ",",
+                "Comma",
+                x,
+                ROW_SHIFT,
+                K
+            );
+
+
+            x += K + KEY_SPACING;
+
+
+            addKey(
+                ".",
+                "Period",
+                x,
+                ROW_SHIFT,
+                K
+            );
+
+
+            x += K + KEY_SPACING;
+
+
+            addKey(
+                "/",
+                "Slash",
+                x,
+                ROW_SHIFT,
+                K
+            );
+
+
+            x += K + KEY_SPACING;
+
+
+            addKey(
+                "SHIFT",
+                "ShiftRight",
+                x,
+                ROW_SHIFT,
+                125
+            );
+
+
+            /* =====================================================
+               BOTTOM ROW
+               ===================================================== */
+
+            x = START_X;
+
+
+            addKey(
+                "CTRL",
+                "ControlLeft",
+                x,
+                ROW_BOTTOM,
+                80
+            );
+
+
+            x += 86;
+
+
+            addKey(
+                "WIN",
+                "MetaLeft",
+                x,
+                ROW_BOTTOM,
+                65
+            );
+
+
+            x += 71;
+
+
+            addKey(
+                "ALT",
+                "AltLeft",
+                x,
+                ROW_BOTTOM,
+                65
+            );
+
+
+            x += 71;
+
+
+            addKey(
+                "SPACE",
+                "Space",
+                x,
+                ROW_BOTTOM,
+                365
+            );
+
+
+            x += 371;
+
+
+            addKey(
+                "ALT",
+                "AltRight",
+                x,
+                ROW_BOTTOM,
+                65
+            );
+
+
+            x += 71;
+
+
+            addKey(
+                "WIN",
+                "MetaRight",
+                x,
+                ROW_BOTTOM,
+                65
+            );
+
+
+            x += 71;
+
+
+            addKey(
+                "MENU",
+                "ContextMenu",
+                x,
+                ROW_BOTTOM,
+                65
+            );
+
+
+            x += 71;
+
+
+            addKey(
+                "CTRL",
+                "ControlRight",
+                x,
+                ROW_BOTTOM,
+                80
+            );
+
+
+            /* =====================================================
+               NAVIGATION KEYS
+               ===================================================== */
+
+            const NAV_X = 935;
+
+            const NAV_Y = 190;
+
+            const NAV_WIDTH = 72;
+
+
+            addKey(
+                "INS",
+                "Insert",
+                NAV_X,
+                NAV_Y,
+                NAV_WIDTH
+            );
+
+
+            addKey(
+                "HOME",
+                "Home",
+                NAV_X + 78,
+                NAV_Y,
+                NAV_WIDTH
+            );
+
+
+            addKey(
+                "PGUP",
+                "PageUp",
+                NAV_X + 156,
+                NAV_Y,
+                NAV_WIDTH
+            );
+
+
+            addKey(
+                "DEL",
+                "Delete",
+                NAV_X,
+                NAV_Y + 60,
+                NAV_WIDTH
+            );
+
+
+            addKey(
+                "END",
+                "End",
+                NAV_X + 78,
+                NAV_Y + 60,
+                NAV_WIDTH
+            );
+
+
+            addKey(
+                "PGDN",
+                "PageDown",
+                NAV_X + 156,
+                NAV_Y + 60,
+                NAV_WIDTH
+            );
+
+
+            /* =====================================================
+               ARROWS
+               ===================================================== */
+
+            const ARROW_X = 1013;
+
+            const ARROW_Y = 330;
+
+            const ARROW_WIDTH = 72;
+
+
+            addKey(
+                "UP",
+                "ArrowUp",
+                ARROW_X,
+                ARROW_Y,
+                ARROW_WIDTH
+            );
+
+
+            addKey(
+                "LEFT",
+                "ArrowLeft",
+                ARROW_X - 78,
+                ARROW_Y + 60,
+                ARROW_WIDTH
+            );
+
+
+            addKey(
+                "DOWN",
+                "ArrowDown",
+                ARROW_X,
+                ARROW_Y + 60,
+                ARROW_WIDTH
+            );
+
+
+            addKey(
+                "RIGHT",
+                "ArrowRight",
+                ARROW_X + 78,
+                ARROW_Y + 60,
+                ARROW_WIDTH
+            );
+
+        }
+
+
+        /* =========================================================
+           RENDER KEYBOARD
+           ========================================================= */
+
+        function renderKeyboard() {
+
+            keyboard.innerHTML = "";
+
+
+            for (const key of keys) {
+
+                const element =
+                    document.createElement("div");
+
+
+                element.className = "key";
+
+
+                element.textContent =
+                    key.name;
+
+
+                element.style.left =
+                    `${key.x}px`;
+
+
+                element.style.top =
+                    `${key.y}px`;
+
+
+                element.style.width =
+                    `${key.width}px`;
+
+
+                key.element =
+                    element;
+
+
+                keyboard.appendChild(
+                    element
+                );
+
+            }
+
+        }
+
+
+        /* =========================================================
+           FIND KEYS
+           ========================================================= */
+
+        function findKeys(code) {
+
+            return keys.filter(
+                key => key.code === code
+            );
+
+        }
+
+
+        /* =========================================================
+           SET KEY PRESSED
+           ========================================================= */
+
+        function setKeyPressed(
+            code,
+            pressed
+        ) {
+
+            const matchingKeys =
+                findKeys(code);
+
+
+            for (
+                const key of matchingKeys
+            ) {
+
+                key.pressed =
+                    pressed;
+
+
+                if (key.element) {
+
+                    key.element.classList.toggle(
+                        "pressed",
+                        pressed
+                    );
+
+                }
+
+            }
+
+        }
+
+
+        /* =========================================================
+           KEY DOWN
+           ========================================================= */
+
+        document.addEventListener(
+            "keydown",
+            function(event) {
+
+                /*
+                 * Prevent the browser from performing its normal
+                 * action for keys such as:
+                 *
+                 * F1
+                 * F2
+                 * F3
+                 * F4
+                 * F5
+                 * F6
+                 * F7
+                 * F8
+                 * F9
+                 * F10
+                 * F11
+                 * F12
+                 * Space
+                 * Tab
+                 * Arrow keys
+                 * Home
+                 * End
+                 * PageUp
+                 * PageDown
+                 * etc.
+                 */
+
+                event.preventDefault();
+
+
+                /*
+                 * Ignore browser auto-repeat.
+                 *
+                 * This corresponds to the C++:
+                 *
+                 * (lParam & (1 << 30)) == 0
+                 */
+
+                if (event.repeat) {
+                    return;
+                }
+
+
+                /*
+                 * KeyboardEvent.code is preferable to
+                 * KeyboardEvent.key because it identifies the
+                 * physical key.
+                 */
+
+                setKeyPressed(
+                    event.code,
+                    true
+                );
+
+            },
+            {
+                capture: true
+            }
+        );
+
+
+        /* =========================================================
+           KEY UP
+           ========================================================= */
+
+        document.addEventListener(
+            "keyup",
+            function(event) {
+
+                event.preventDefault();
+
+
+                setKeyPressed(
+                    event.code,
+                    false
+                );
+
+            },
+            {
+                capture: true
+            }
+        );
+
+
+        /* =========================================================
+           WINDOW BLUR
+           ========================================================= */
+
+        /*
+         * This is important for a browser implementation.
+         *
+         * If the user presses a key and then changes browser tabs,
+         * the browser might not send the keyup event.
+         *
+         * Clearing all pressed keys prevents the keyboard from
+         * getting permanently stuck visually.
+         */
+
+        window.addEventListener(
+            "blur",
+            function() {
+
+                for (const key of keys) {
+
+                    key.pressed = false;
+
+
+                    if (key.element) {
+
+                        key.element.classList.remove(
+                            "pressed"
+                        );
+
+                    }
+
+                }
+
+            }
+        );
+
+
+        /* =========================================================
+           VISIBILITY CHANGE
+           ========================================================= */
+
+        document.addEventListener(
+            "visibilitychange",
+            function() {
+
+                if (
+                    document.hidden
+                ) {
+
+                    for (const key of keys) {
+
+                        key.pressed = false;
+
+
+                        if (key.element) {
+
+                            key.element.classList.remove(
+                                "pressed"
+                            );
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
+
+
+        /* =========================================================
+           SOCIAL BUTTONS
+           ========================================================= */
+
+        const socialButtons =
+            document.querySelectorAll(
+                ".social-button"
+            );
+
+
+        for (
+            const button of socialButtons
+        ) {
+
+            button.addEventListener(
+                "click",
+                function() {
+
+                    const url =
+                        button.dataset.url;
+
+
+                    if (!url) {
+                        return;
+                    }
+
+
+                    window.open(
+                        url,
+                        "_blank",
+                        "noopener,noreferrer"
+                    );
+
+                }
+            );
+
+        }
+
+
+        /* =========================================================
+           INITIALIZE
+           ========================================================= */
+
+        createKeyboard();
+
+        renderKeyboard();
+
+
+        /* =========================================================
+           FOCUS
+           ========================================================= */
+
+        /*
+         * Clicking anywhere in the application keeps the page
+         * ready for keyboard input.
+         */
+
+        document.getElementById("app")
+            .addEventListener(
+                "click",
+                function() {
+
+                    window.focus();
+
+                }
+            );
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="KeyChecker/KeyChecker.vcxproj" Id="8f6e95c6-9eab-4080-9c04-eeb5b20f6bb2" />
+</Solution>
