@@ -1,2 +1,3 @@
 # KeyChecker
 Key Checker Application &amp; Website Version!
+Note: The C++ Application Has A Bug Where The PNG Files Dont Show Up Working On Fixing That Soon...
