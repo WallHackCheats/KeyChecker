@@ -2,6 +2,8 @@
 // KeyChecker
 // Native Windows C++ Desktop Application
 //
+// Keyboard + Gaming Mouse Tester
+//
 // Requirements:
 //
 // KeyChecker.cpp
@@ -27,6 +29,7 @@
 
 #include <vector>
 #include <string>
+#include <cmath>
 
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
@@ -34,7 +37,9 @@
 #pragma comment(lib, "shell32.lib")
 
 
-
+// ============================================================
+// CONSTANTS
+// ============================================================
 
 constexpr float KEY_HEIGHT = 54.0f;
 constexpr float KEY_SPACING = 6.0f;
@@ -55,7 +60,35 @@ constexpr float BUTTON_MARGIN_LEFT = 25.0f;
 constexpr float BUTTON_MARGIN_BOTTOM = 14.0f;
 
 
+// ============================================================
+// MOUSE CONSTANTS
+// ============================================================
 
+constexpr float MOUSE_X = 1325.0f;
+constexpr float MOUSE_Y = 155.0f;
+
+
+constexpr float MOUSE_WIDTH = 190.0f;
+constexpr float MOUSE_HEIGHT = 330.0f;
+
+constexpr float MOUSE_RADIUS = 82.0f;
+
+constexpr float MOUSE_BUTTON_HEIGHT = 135.0f;
+
+constexpr float MOUSE_WHEEL_WIDTH = 30.0f;
+constexpr float MOUSE_WHEEL_HEIGHT = 58.0f;
+
+constexpr float MOUSE_SIDE_WIDTH = 35.0f;
+constexpr float MOUSE_SIDE_HEIGHT = 72.0f;
+
+constexpr float MOUSE_LABEL_FONT_SIZE = 14.0f;
+
+constexpr DWORD MOUSE_FLASH_TIME = 180;
+
+
+// ============================================================
+// STRUCTURES
+// ============================================================
 
 struct KeyboardKey
 {
@@ -69,8 +102,6 @@ struct KeyboardKey
 
     bool pressed;
 };
-
-
 
 
 struct SocialButton
@@ -91,12 +122,16 @@ struct SocialButton
 };
 
 
-
+// ============================================================
+// GLOBALS
+// ============================================================
 
 HWND g_hWnd = nullptr;
 
 
-
+// ============================================================
+// DIRECT2D
+// ============================================================
 
 ID2D1Factory* g_d2dFactory = nullptr;
 
@@ -112,6 +147,20 @@ ID2D1LinearGradientBrush* g_backgroundBrush = nullptr;
 
 
 
+// Mouse brushes
+
+ID2D1SolidColorBrush* g_mouseBrush = nullptr;
+ID2D1SolidColorBrush* g_mousePressedBrush = nullptr;
+ID2D1SolidColorBrush* g_mouseHoverBrush = nullptr;
+ID2D1SolidColorBrush* g_mouseWheelBrush = nullptr;
+ID2D1SolidColorBrush* g_mouseLineBrush = nullptr;
+ID2D1SolidColorBrush* g_scrollUpBrush = nullptr;
+ID2D1SolidColorBrush* g_scrollDownBrush = nullptr;
+
+
+// ============================================================
+// DIRECTWRITE
+// ============================================================
 
 IDWriteFactory* g_writeFactory = nullptr;
 
@@ -120,26 +169,59 @@ IDWriteTextFormat* g_titleTextFormat = nullptr;
 IDWriteTextFormat* g_copyrightTextFormat = nullptr;
 IDWriteTextFormat* g_buttonTextFormat = nullptr;
 
+IDWriteTextFormat* g_mouseLabelTextFormat = nullptr;
 
 
+// ============================================================
+// WIC
+// ============================================================
 
 IWICImagingFactory* g_wicFactory = nullptr;
 
 
-
+// ============================================================
+// DATA
+// ============================================================
 
 std::vector<KeyboardKey> g_keyboard;
 std::vector<SocialButton> g_buttons;
 
 
-
+// ============================================================
+// CUSTOM FONT
+// ============================================================
 
 bool g_customFontLoaded = false;
 
 std::wstring g_customFontPath;
 
 
+// ============================================================
+// MOUSE STATE
+// ============================================================
 
+struct MouseState
+{
+    bool leftPressed = false;
+    bool rightPressed = false;
+    bool middlePressed = false;
+
+    bool sideBackPressed = false;
+    bool sideForwardPressed = false;
+
+    bool scrollUp = false;
+    bool scrollDown = false;
+
+    DWORD scrollUpTime = 0;
+    DWORD scrollDownTime = 0;
+};
+
+MouseState g_mouse;
+
+
+// ============================================================
+// SAFE RELEASE
+// ============================================================
 
 template <typename T>
 void SafeRelease(T*& object)
@@ -152,7 +234,9 @@ void SafeRelease(T*& object)
 }
 
 
-
+// ============================================================
+// APPLICATION DIRECTORY
+// ============================================================
 
 std::wstring GetApplicationDirectory()
 {
@@ -192,7 +276,9 @@ std::wstring GetApplicationDirectory()
 }
 
 
-
+// ============================================================
+// FONT
+// ============================================================
 
 bool LoadCustomFont()
 {
@@ -241,8 +327,6 @@ bool LoadCustomFont()
 }
 
 
-
-
 void UnloadCustomFont()
 {
     if (
@@ -261,7 +345,9 @@ void UnloadCustomFont()
 }
 
 
-
+// ============================================================
+// KEY CREATION
+// ============================================================
 
 void AddKey(
     const std::wstring& name,
@@ -288,7 +374,9 @@ void AddKey(
 }
 
 
-
+// ============================================================
+// CREATE KEYBOARD
+// ============================================================
 
 void CreateKeyboard()
 {
@@ -304,8 +392,6 @@ void CreateKeyboard()
     constexpr float ROW_BOTTOM = 430.0f;
 
     constexpr float START_X = 25.0f;
-
-
 
 
     float x = START_X;
@@ -388,6 +474,9 @@ void CreateKeyboard()
     );
 
 
+    // ========================================================
+    // NUMBER ROW
+    // ========================================================
 
     x = START_X;
 
@@ -439,7 +528,9 @@ void CreateKeyboard()
     );
 
 
-
+    // ========================================================
+    // QWERTY
+    // ========================================================
 
     x = START_X;
 
@@ -489,8 +580,6 @@ void CreateKeyboard()
     AddKey(L"]", VK_OEM_6, x, ROW_QWERTY, K);
     x += K + KEY_SPACING;
 
-    // Backslash is kept in its own correct position.
-
     AddKey(
         L"\\",
         VK_OEM_5,
@@ -500,7 +589,9 @@ void CreateKeyboard()
     );
 
 
-
+    // ========================================================
+    // HOME ROW
+    // ========================================================
 
     x = START_X;
 
@@ -556,7 +647,9 @@ void CreateKeyboard()
     );
 
 
-
+    // ========================================================
+    // SHIFT ROW
+    // ========================================================
 
     x = START_X;
 
@@ -609,7 +702,9 @@ void CreateKeyboard()
     );
 
 
-
+    // ========================================================
+    // BOTTOM ROW
+    // ========================================================
 
     x = START_X;
 
@@ -692,19 +787,15 @@ void CreateKeyboard()
     );
 
 
-
+    // ========================================================
+    // NAVIGATION
+    // ========================================================
 
     constexpr float NAV_X = 935.0f;
     constexpr float NAV_Y = 190.0f;
     constexpr float NAV_WIDTH = 72.0f;
 
-    AddKey(
-        L"INS",
-        VK_INSERT,
-        NAV_X,
-        NAV_Y,
-        NAV_WIDTH
-    );
+    AddKey(L"INS", VK_INSERT, NAV_X, NAV_Y, NAV_WIDTH);
 
     AddKey(
         L"HOME",
@@ -747,7 +838,9 @@ void CreateKeyboard()
     );
 
 
-
+    // ========================================================
+    // ARROW KEYS
+    // ========================================================
 
     constexpr float ARROW_X = 1013.0f;
     constexpr float ARROW_Y = 330.0f;
@@ -760,9 +853,6 @@ void CreateKeyboard()
         ARROW_Y,
         ARROW_WIDTH
     );
-
-    // LEFT is explicitly placed to the LEFT
-    // of DOWN instead of underneath CTRL.
 
     AddKey(
         L"LEFT",
@@ -790,6 +880,9 @@ void CreateKeyboard()
 }
 
 
+// ============================================================
+// SOCIAL BUTTONS
+// ============================================================
 
 void CreateButtons()
 {
@@ -815,9 +908,7 @@ void CreateButtons()
     github.bitmap = nullptr;
     github.hovered = false;
 
-    g_buttons.push_back(
-        github
-    );
+    g_buttons.push_back(github);
 
 
     SocialButton discord{};
@@ -839,9 +930,7 @@ void CreateButtons()
     discord.bitmap = nullptr;
     discord.hovered = false;
 
-    g_buttons.push_back(
-        discord
-    );
+    g_buttons.push_back(discord);
 
 
     SocialButton youtube{};
@@ -863,12 +952,13 @@ void CreateButtons()
     youtube.bitmap = nullptr;
     youtube.hovered = false;
 
-    g_buttons.push_back(
-        youtube
-    );
+    g_buttons.push_back(youtube);
 }
 
 
+// ============================================================
+// LOAD PNG
+// ============================================================
 
 HRESULT LoadPNG(
     const std::wstring& filename,
@@ -964,7 +1054,9 @@ cleanup:
 }
 
 
-
+// ============================================================
+// LOAD BUTTON IMAGES
+// ============================================================
 
 void LoadButtonImages()
 {
@@ -991,13 +1083,15 @@ void LoadButtonImages()
 }
 
 
+// ============================================================
+// CREATE DEVICE RESOURCES
+// ============================================================
+
 HRESULT CreateDeviceResources(
     HWND hwnd
 )
 {
     HRESULT hr = S_OK;
-
-
 
 
     if (!g_d2dFactory)
@@ -1033,8 +1127,6 @@ HRESULT CreateDeviceResources(
     }
 
 
-
-
     if (!g_wicFactory)
     {
         hr =
@@ -1054,45 +1146,45 @@ HRESULT CreateDeviceResources(
     }
 
 
-
-
     if (!g_renderTarget)
     {
         RECT rect{};
-
-        GetClientRect(
-            hwnd,
-            &rect
-        );
-
+        GetClientRect(hwnd, &rect);
 
         UINT width =
             static_cast<UINT>(
-                rect.right -
-                rect.left
+                rect.right - rect.left
                 );
-
 
         UINT height =
             static_cast<UINT>(
-                rect.bottom -
-                rect.top
+                rect.bottom - rect.top
                 );
 
+        if (width == 0 || height == 0)
+        {
+            return S_OK;
+        }
 
-        hr =
-            g_d2dFactory->CreateHwndRenderTarget(
-                D2D1::RenderTargetProperties(),
-                D2D1::HwndRenderTargetProperties(
-                    hwnd,
-                    D2D1::SizeU(
-                        width,
-                        height
-                    )
+        hr = g_d2dFactory->CreateHwndRenderTarget(
+            D2D1::RenderTargetProperties(
+                D2D1_RENDER_TARGET_TYPE_DEFAULT,
+                D2D1::PixelFormat(
+                    DXGI_FORMAT_B8G8R8A8_UNORM,
+                    D2D1_ALPHA_MODE_IGNORE
                 ),
-                &g_renderTarget
-            );
-
+                96.0f,
+                96.0f,
+                D2D1_RENDER_TARGET_USAGE_NONE,
+                D2D1_FEATURE_LEVEL_DEFAULT
+            ),
+            D2D1::HwndRenderTargetProperties(
+                hwnd,
+                D2D1::SizeU(width, height),
+                D2D1_PRESENT_OPTIONS_NONE
+            ),
+            &g_renderTarget
+        );
 
         if (FAILED(hr))
         {
@@ -1102,6 +1194,9 @@ HRESULT CreateDeviceResources(
 
 
 
+    // ========================================================
+    // STANDARD BRUSHES
+    // ========================================================
 
     if (!g_whiteBrush)
     {
@@ -1120,8 +1215,6 @@ HRESULT CreateDeviceResources(
     }
 
 
-
-
     if (!g_blackBrush)
     {
         hr =
@@ -1137,8 +1230,6 @@ HRESULT CreateDeviceResources(
             return hr;
         }
     }
-
-
 
 
     if (!g_buttonBrush)
@@ -1159,8 +1250,6 @@ HRESULT CreateDeviceResources(
     }
 
 
-
-
     if (!g_buttonHoverBrush)
     {
         hr =
@@ -1179,103 +1268,20 @@ HRESULT CreateDeviceResources(
     }
 
 
+    // ========================================================
+    // MOUSE BRUSHES
+    // ========================================================
 
-    if (!g_backgroundBrush)
+    if (!g_mouseBrush)
     {
-        ID2D1GradientStopCollection*
-            gradientStops = nullptr;
-
-
-        D2D1_GRADIENT_STOP stops[3];
-
-
-        stops[0].position = 0.0f;
-
-        stops[0].color =
-            D2D1::ColorF(
-                0x300642,
-                1.0f
-            );
-
-
-        stops[1].position = 0.5f;
-
-        stops[1].color =
-            D2D1::ColorF(
-                0x170A3B,
-                1.0f
-            );
-
-
-        stops[2].position = 1.0f;
-
-        stops[2].color =
-            D2D1::ColorF(
-                0x041936,
-                1.0f
-            );
-
-
         hr =
-            g_renderTarget->CreateGradientStopCollection(
-                stops,
-                3,
-                D2D1_GAMMA_2_2,
-                D2D1_EXTEND_MODE_CLAMP,
-                &gradientStops
-            );
-
-
-        if (FAILED(hr))
-        {
-            return hr;
-        }
-
-
-        RECT rect{};
-
-        GetClientRect(
-            hwnd,
-            &rect
-        );
-
-
-        float width =
-            static_cast<float>(
-                rect.right -
-                rect.left
-                );
-
-
-        float height =
-            static_cast<float>(
-                rect.bottom -
-                rect.top
-                );
-
-
-        hr =
-            g_renderTarget->CreateLinearGradientBrush(
-                D2D1::LinearGradientBrushProperties(
-                    D2D1::Point2F(
-                        0.0f,
-                        0.0f
-                    ),
-                    D2D1::Point2F(
-                        width,
-                        height
-                    )
+            g_renderTarget->CreateSolidColorBrush(
+                D2D1::ColorF(
+                    0x111827,
+                    1.0f
                 ),
-                D2D1::BrushProperties(),
-                gradientStops,
-                &g_backgroundBrush
+                &g_mouseBrush
             );
-
-
-        SafeRelease(
-            gradientStops
-        );
-
 
         if (FAILED(hr))
         {
@@ -1284,14 +1290,192 @@ HRESULT CreateDeviceResources(
     }
 
 
+    if (!g_mousePressedBrush)
+    {
+        hr =
+            g_renderTarget->CreateSolidColorBrush(
+                D2D1::ColorF(
+                    0x8B5CF6,
+                    1.0f
+                ),
+                &g_mousePressedBrush
+            );
 
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+
+    if (!g_mouseHoverBrush)
+    {
+        hr =
+            g_renderTarget->CreateSolidColorBrush(
+                D2D1::ColorF(
+                    0x293548,
+                    1.0f
+                ),
+                &g_mouseHoverBrush
+            );
+
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+
+    if (!g_mouseWheelBrush)
+    {
+        hr =
+            g_renderTarget->CreateSolidColorBrush(
+                D2D1::ColorF(
+                    0xA855F7,
+                    1.0f
+                ),
+                &g_mouseWheelBrush
+            );
+
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+
+    if (!g_mouseLineBrush)
+    {
+        hr =
+            g_renderTarget->CreateSolidColorBrush(
+                D2D1::ColorF(
+                    0xFFFFFF,
+                    0.70f
+                ),
+                &g_mouseLineBrush
+            );
+
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+
+    if (!g_scrollUpBrush)
+    {
+        hr =
+            g_renderTarget->CreateSolidColorBrush(
+                D2D1::ColorF(
+                    0x22C55E,
+                    1.0f
+                ),
+                &g_scrollUpBrush
+            );
+
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+
+    if (!g_scrollDownBrush)
+    {
+        hr =
+            g_renderTarget->CreateSolidColorBrush(
+                D2D1::ColorF(
+                    0xEF4444,
+                    1.0f
+                ),
+                &g_scrollDownBrush
+            );
+
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+
+    // ========================================================
+    // BACKGROUND
+    // ========================================================
+
+    if (!g_backgroundBrush)
+    {
+        ID2D1GradientStopCollection* gradientStops = nullptr;
+
+        D2D1_GRADIENT_STOP stops[3];
+
+        stops[0].position = 0.0f;
+        stops[0].color = D2D1::ColorF(
+            0x300642,
+            1.0f
+        );
+
+        stops[1].position = 0.5f;
+        stops[1].color = D2D1::ColorF(
+            0x170A3B,
+            1.0f
+        );
+
+        stops[2].position = 1.0f;
+        stops[2].color = D2D1::ColorF(
+            0x041936,
+            1.0f
+        );
+
+        hr = g_renderTarget->CreateGradientStopCollection(
+            stops,
+            3,
+            D2D1_GAMMA_2_2,
+            D2D1_EXTEND_MODE_CLAMP,
+            &gradientStops
+        );
+
+        if (FAILED(hr))
+        {
+            SafeRelease(gradientStops);
+            return hr;
+        }
+
+        RECT rect{};
+        GetClientRect(hwnd, &rect);
+
+        const float width =
+            static_cast<float>(rect.right - rect.left);
+
+        const float height =
+            static_cast<float>(rect.bottom - rect.top);
+
+        hr = g_renderTarget->CreateLinearGradientBrush(
+            D2D1::LinearGradientBrushProperties(
+                D2D1::Point2F(0.0f, 0.0f),
+                D2D1::Point2F(width, height)
+            ),
+            D2D1::BrushProperties(),
+            gradientStops,
+            &g_backgroundBrush
+        );
+
+        SafeRelease(gradientStops);
+
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+
+    // ========================================================
+    // FONT
+    // ========================================================
 
     const wchar_t* fontName =
         g_customFontLoaded
         ? L"font"
         : L"Segoe UI";
-
-
 
 
     if (!g_keyTextFormat)
@@ -1326,7 +1510,6 @@ HRESULT CreateDeviceResources(
     }
 
 
-
     if (!g_titleTextFormat)
     {
         hr =
@@ -1357,8 +1540,6 @@ HRESULT CreateDeviceResources(
             DWRITE_PARAGRAPH_ALIGNMENT_CENTER
         );
     }
-
-
 
 
     if (!g_copyrightTextFormat)
@@ -1393,8 +1574,6 @@ HRESULT CreateDeviceResources(
     }
 
 
-
-
     if (!g_buttonTextFormat)
     {
         hr =
@@ -1427,6 +1606,46 @@ HRESULT CreateDeviceResources(
     }
 
 
+    // ========================================================
+    // MOUSE LABEL FONT
+    // ========================================================
+
+    if (!g_mouseLabelTextFormat)
+    {
+        hr =
+            g_writeFactory->CreateTextFormat(
+                fontName,
+                nullptr,
+                DWRITE_FONT_WEIGHT_BOLD,
+                DWRITE_FONT_STYLE_NORMAL,
+                DWRITE_FONT_STRETCH_NORMAL,
+                MOUSE_LABEL_FONT_SIZE,
+                L"en-us",
+                &g_mouseLabelTextFormat
+            );
+
+
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+
+        g_mouseLabelTextFormat->SetTextAlignment(
+            DWRITE_TEXT_ALIGNMENT_CENTER
+        );
+
+
+        g_mouseLabelTextFormat->SetParagraphAlignment(
+            DWRITE_PARAGRAPH_ALIGNMENT_CENTER
+        );
+    }
+
+
+    // ========================================================
+    // LOAD IMAGES
+    // ========================================================
+
     bool needsImages = false;
 
 
@@ -1453,6 +1672,9 @@ HRESULT CreateDeviceResources(
 }
 
 
+// ============================================================
+// DISCARD DEVICE RESOURCES
+// ============================================================
 
 void DiscardDeviceResources()
 {
@@ -1475,10 +1697,19 @@ void DiscardDeviceResources()
     SafeRelease(g_buttonBrush);
     SafeRelease(g_buttonHoverBrush);
 
+    SafeRelease(g_mouseBrush);
+    SafeRelease(g_mousePressedBrush);
+    SafeRelease(g_mouseHoverBrush);
+    SafeRelease(g_mouseWheelBrush);
+    SafeRelease(g_mouseLineBrush);
+    SafeRelease(g_scrollUpBrush);
+    SafeRelease(g_scrollDownBrush);
+
     SafeRelease(g_keyTextFormat);
     SafeRelease(g_titleTextFormat);
     SafeRelease(g_copyrightTextFormat);
     SafeRelease(g_buttonTextFormat);
+    SafeRelease(g_mouseLabelTextFormat);
 
     SafeRelease(g_renderTarget);
 
@@ -1490,7 +1721,9 @@ void DiscardDeviceResources()
 }
 
 
-
+// ============================================================
+// DRAW TEXT
+// ============================================================
 
 void DrawTextCentered(
     const std::wstring& text,
@@ -1521,6 +1754,10 @@ void DrawTextCentered(
 }
 
 
+// ============================================================
+// DRAW KEY
+// ============================================================
+
 void DrawKey(
     const KeyboardKey& key
 )
@@ -1549,15 +1786,11 @@ void DrawKey(
 
     if (key.pressed)
     {
-        // White background.
-
         g_renderTarget->FillRoundedRectangle(
             roundedRect,
             g_whiteBrush
         );
 
-
-        // White border.
 
         g_renderTarget->DrawRoundedRectangle(
             roundedRect,
@@ -1565,8 +1798,6 @@ void DrawKey(
             BORDER_THICKNESS
         );
 
-
-        // Black text.
 
         DrawTextCentered(
             key.name,
@@ -1577,16 +1808,12 @@ void DrawKey(
     }
     else
     {
-        // No fill = transparent.
-
         g_renderTarget->DrawRoundedRectangle(
             roundedRect,
             g_whiteBrush,
             BORDER_THICKNESS
         );
 
-
-        // White text.
 
         DrawTextCentered(
             key.name,
@@ -1598,7 +1825,9 @@ void DrawKey(
 }
 
 
-
+// ============================================================
+// DRAW SOCIAL BUTTON
+// ============================================================
 
 void DrawSocialButton(
     const SocialButton& button
@@ -1617,8 +1846,6 @@ void DrawSocialButton(
         );
 
 
-
-
     if (button.hovered)
     {
         g_renderTarget->FillRoundedRectangle(
@@ -1635,13 +1862,12 @@ void DrawSocialButton(
     }
 
 
-
-
     g_renderTarget->DrawRoundedRectangle(
         roundedRect,
         g_whiteBrush,
         BORDER_THICKNESS
     );
+
 
     if (button.bitmap)
     {
@@ -1669,7 +1895,6 @@ void DrawSocialButton(
             );
 
 
-
         g_renderTarget->DrawBitmap(
             button.bitmap,
             iconRect,
@@ -1677,7 +1902,6 @@ void DrawSocialButton(
             D2D1_BITMAP_INTERPOLATION_MODE_LINEAR
         );
     }
-
 
 
     D2D1_RECT_F textRect =
@@ -1701,6 +1925,9 @@ void DrawSocialButton(
 }
 
 
+// ============================================================
+// DRAW SOCIAL BUTTONS
+// ============================================================
 
 void DrawSocialButtons()
 {
@@ -1716,7 +1943,9 @@ void DrawSocialButtons()
 }
 
 
-
+// ============================================================
+// DRAW COPYRIGHT
+// ============================================================
 
 void DrawCopyright()
 {
@@ -1758,14 +1987,732 @@ void DrawCopyright()
 }
 
 
+// ============================================================
+// MOUSE HELPER
+// ============================================================
 
-
-void UpdateButtonPositions()
+bool MouseFlashActive(
+    DWORD time
+)
 {
-    if (!g_renderTarget)
+    return
+        time != 0 &&
+        (GetTickCount() - time) <
+        MOUSE_FLASH_TIME;
+}
+
+
+// ============================================================
+// DRAW LINE + LABEL
+// ============================================================
+
+void DrawMouseLabelLine(
+    const D2D1_POINT_2F& start,
+    const D2D1_POINT_2F& end,
+    const std::wstring& text,
+    const D2D1_RECT_F& textRect
+)
+{
+    g_renderTarget->DrawLine(
+        start,
+        end,
+        g_mouseLineBrush,
+        1.5f
+    );
+
+
+    // Small endpoint dot.
+
+    g_renderTarget->FillEllipse(
+        D2D1::Ellipse(
+            end,
+            3.0f,
+            3.0f
+        ),
+        g_mouseLineBrush
+    );
+
+
+    DrawTextCentered(
+        text,
+        textRect,
+        g_mouseLabelTextFormat,
+        g_whiteBrush
+    );
+}
+
+
+// ============================================================
+// DRAW ARROW
+// ============================================================
+
+void DrawArrow(
+    D2D1_POINT_2F from,
+    D2D1_POINT_2F to,
+    ID2D1Brush* brush
+)
+{
+    g_renderTarget->DrawLine(
+        from,
+        to,
+        brush,
+        3.0f
+    );
+
+
+    float dx =
+        to.x - from.x;
+
+    float dy =
+        to.y - from.y;
+
+    float length =
+        std::sqrt(
+            dx * dx +
+            dy * dy
+        );
+
+    if (length <= 0.0f)
     {
         return;
     }
+
+
+    dx /= length;
+    dy /= length;
+
+
+    float px = -dy;
+    float py = dx;
+
+
+    constexpr float ARROW_SIZE = 9.0f;
+
+
+    D2D1_POINT_2F p1 =
+        D2D1::Point2F(
+            to.x -
+            dx * ARROW_SIZE +
+            px * 5.0f,
+
+            to.y -
+            dy * ARROW_SIZE +
+            py * 5.0f
+        );
+
+
+    D2D1_POINT_2F p2 =
+        D2D1::Point2F(
+            to.x -
+            dx * ARROW_SIZE -
+            px * 5.0f,
+
+            to.y -
+            dy * ARROW_SIZE -
+            py * 5.0f
+        );
+
+
+    g_renderTarget->DrawLine(
+        p1,
+        to,
+        brush,
+        3.0f
+    );
+
+
+    g_renderTarget->DrawLine(
+        p2,
+        to,
+        brush,
+        3.0f
+    );
+}
+
+
+// ============================================================
+// DRAW GAMING MOUSE
+// ============================================================
+
+void DrawGamingMouse()
+{
+    const float x = MOUSE_X;
+    const float y = MOUSE_Y;
+
+
+    // ========================================================
+    // OUTER MOUSE BODY
+    // ========================================================
+
+    D2D1_ROUNDED_RECT body =
+        D2D1::RoundedRect(
+            D2D1::RectF(
+                x,
+                y,
+                x + MOUSE_WIDTH,
+                y + MOUSE_HEIGHT
+            ),
+            MOUSE_RADIUS,
+            MOUSE_RADIUS
+        );
+
+
+    g_renderTarget->FillRoundedRectangle(
+        body,
+        g_mouseBrush
+    );
+
+
+    g_renderTarget->DrawRoundedRectangle(
+        body,
+        g_whiteBrush,
+        2.5f
+    );
+
+
+    // ========================================================
+    // LEFT CLICK
+    // ========================================================
+
+    D2D1_RECT_F leftButton =
+        D2D1::RectF(
+            x + 8.0f,
+            y + 8.0f,
+            x + MOUSE_WIDTH / 2.0f - 2.0f,
+            y + MOUSE_BUTTON_HEIGHT
+        );
+
+
+    if (g_mouse.leftPressed)
+    {
+        g_renderTarget->FillRoundedRectangle(
+            D2D1::RoundedRect(
+                leftButton,
+                22.0f,
+                22.0f
+            ),
+            g_mousePressedBrush
+        );
+    }
+
+
+    g_renderTarget->DrawRoundedRectangle(
+        D2D1::RoundedRect(
+            leftButton,
+            22.0f,
+            22.0f
+        ),
+        g_whiteBrush,
+        1.5f
+    );
+
+
+    // ========================================================
+    // RIGHT CLICK
+    // ========================================================
+
+    D2D1_RECT_F rightButton =
+        D2D1::RectF(
+            x + MOUSE_WIDTH / 2.0f + 2.0f,
+            y + 8.0f,
+            x + MOUSE_WIDTH - 8.0f,
+            y + MOUSE_BUTTON_HEIGHT
+        );
+
+
+    if (g_mouse.rightPressed)
+    {
+        g_renderTarget->FillRoundedRectangle(
+            D2D1::RoundedRect(
+                rightButton,
+                22.0f,
+                22.0f
+            ),
+            g_mousePressedBrush
+        );
+    }
+
+
+    g_renderTarget->DrawRoundedRectangle(
+        D2D1::RoundedRect(
+            rightButton,
+            22.0f,
+            22.0f
+        ),
+        g_whiteBrush,
+        1.5f
+    );
+
+
+    // ========================================================
+    // CENTER DIVIDER
+    // ========================================================
+
+    g_renderTarget->DrawLine(
+        D2D1::Point2F(
+            x + MOUSE_WIDTH / 2.0f,
+            y + 10.0f
+        ),
+
+        D2D1::Point2F(
+            x + MOUSE_WIDTH / 2.0f,
+            y + MOUSE_BUTTON_HEIGHT
+        ),
+
+        g_whiteBrush,
+        1.5f
+    );
+
+
+    // ========================================================
+    // SCROLL WHEEL
+    // ========================================================
+
+    float wheelX =
+        x +
+        MOUSE_WIDTH / 2.0f -
+        MOUSE_WHEEL_WIDTH / 2.0f;
+
+
+    float wheelY =
+        y + 54.0f;
+
+
+    D2D1_ROUNDED_RECT wheel =
+        D2D1::RoundedRect(
+            D2D1::RectF(
+                wheelX,
+                wheelY,
+                wheelX + MOUSE_WHEEL_WIDTH,
+                wheelY + MOUSE_WHEEL_HEIGHT
+            ),
+            12.0f,
+            12.0f
+        );
+
+
+    if (g_mouse.middlePressed)
+    {
+        g_renderTarget->FillRoundedRectangle(
+            wheel,
+            g_mousePressedBrush
+        );
+    }
+    else
+    {
+        g_renderTarget->FillRoundedRectangle(
+            wheel,
+            g_mouseWheelBrush
+        );
+    }
+
+
+    g_renderTarget->DrawRoundedRectangle(
+        wheel,
+        g_whiteBrush,
+        1.5f
+    );
+
+
+    // Wheel grooves.
+
+    for (int i = 0; i < 5; ++i)
+    {
+        float grooveY =
+            wheelY +
+            10.0f +
+            static_cast<float>(i) * 9.0f;
+
+
+        g_renderTarget->DrawLine(
+            D2D1::Point2F(
+                wheelX + 7.0f,
+                grooveY
+            ),
+
+            D2D1::Point2F(
+                wheelX + MOUSE_WHEEL_WIDTH - 7.0f,
+                grooveY
+            ),
+
+            g_whiteBrush,
+            1.0f
+        );
+    }
+
+
+    // ========================================================
+    // SIDE BUTTONS
+    // ========================================================
+
+    float sideX =
+        x - MOUSE_SIDE_WIDTH - 8.0f;
+
+
+    float sideY1 =
+        y + 120.0f;
+
+
+    float sideY2 =
+        y + 205.0f;
+
+
+    D2D1_ROUNDED_RECT sideBack =
+        D2D1::RoundedRect(
+            D2D1::RectF(
+                sideX,
+                sideY1,
+                sideX + MOUSE_SIDE_WIDTH,
+                sideY1 + MOUSE_SIDE_HEIGHT
+            ),
+            10.0f,
+            10.0f
+        );
+
+
+    D2D1_ROUNDED_RECT sideForward =
+        D2D1::RoundedRect(
+            D2D1::RectF(
+                sideX,
+                sideY2,
+                sideX + MOUSE_SIDE_WIDTH,
+                sideY2 + MOUSE_SIDE_HEIGHT
+            ),
+            10.0f,
+            10.0f
+        );
+
+
+    if (g_mouse.sideBackPressed)
+    {
+        g_renderTarget->FillRoundedRectangle(
+            sideBack,
+            g_mousePressedBrush
+        );
+    }
+
+
+    if (g_mouse.sideForwardPressed)
+    {
+        g_renderTarget->FillRoundedRectangle(
+            sideForward,
+            g_mousePressedBrush
+        );
+    }
+
+
+    g_renderTarget->DrawRoundedRectangle(
+        sideBack,
+        g_whiteBrush,
+        1.5f
+    );
+
+
+    g_renderTarget->DrawRoundedRectangle(
+        sideForward,
+        g_whiteBrush,
+        1.5f
+    );
+
+
+    // ========================================================
+    // SCROLL ARROWS
+    // ========================================================
+
+    float arrowX =
+        x + MOUSE_WIDTH + 48.0f;
+
+
+    float arrowCenterY =
+        y + 150.0f;
+
+
+    bool upActive =
+        MouseFlashActive(
+            g_mouse.scrollUpTime
+        );
+
+
+    bool downActive =
+        MouseFlashActive(
+            g_mouse.scrollDownTime
+        );
+
+
+    // UP
+
+    ID2D1Brush* upBrush =
+        upActive
+        ? g_scrollUpBrush
+        : g_mouseLineBrush;
+
+
+    DrawArrow(
+        D2D1::Point2F(
+            arrowX,
+            arrowCenterY + 18.0f
+        ),
+
+        D2D1::Point2F(
+            arrowX,
+            arrowCenterY - 18.0f
+        ),
+
+        upBrush
+    );
+
+
+    // DOWN
+
+    ID2D1Brush* downBrush =
+        downActive
+        ? g_scrollDownBrush
+        : g_mouseLineBrush;
+
+
+    DrawArrow(
+        D2D1::Point2F(
+            arrowX,
+            arrowCenterY + 55.0f
+        ),
+
+        D2D1::Point2F(
+            arrowX,
+            arrowCenterY + 91.0f
+        ),
+
+        downBrush
+    );
+
+
+    // Scroll text.
+
+    DrawTextCentered(
+        L"SCROLL UP",
+        D2D1::RectF(
+            arrowX - 55.0f,
+            arrowCenterY - 60.0f,
+            arrowX + 55.0f,
+            arrowCenterY - 38.0f
+        ),
+        g_mouseLabelTextFormat,
+        upBrush
+    );
+
+
+    DrawTextCentered(
+        L"SCROLL DOWN",
+        D2D1::RectF(
+            arrowX - 65.0f,
+            arrowCenterY + 100.0f,
+            arrowX + 65.0f,
+            arrowCenterY + 122.0f
+        ),
+        g_mouseLabelTextFormat,
+        downBrush
+    );
+
+
+    // ========================================================
+    // POINTER LABELS
+    // ========================================================
+
+    // LEFT CLICK
+
+    DrawMouseLabelLine(
+        D2D1::Point2F(
+            x + 35.0f,
+            y + 55.0f
+        ),
+
+        D2D1::Point2F(
+            x - 55.0f,
+            y + 35.0f
+        ),
+
+        L"LEFT CLICK",
+
+        D2D1::RectF(
+            x - 180.0f,
+            y + 10.0f,
+            x - 60.0f,
+            y + 55.0f
+        )
+    );
+
+
+    // RIGHT CLICK
+
+    DrawMouseLabelLine(
+        D2D1::Point2F(
+            x + MOUSE_WIDTH - 35.0f,
+            y + 55.0f
+        ),
+
+        D2D1::Point2F(
+            x + MOUSE_WIDTH + 125.0f,
+            y + 35.0f
+        ),
+
+        L"RIGHT CLICK",
+
+        D2D1::RectF(
+            x + MOUSE_WIDTH + 80.0f,
+            y + 10.0f,
+            x + MOUSE_WIDTH + 205.0f,
+            y + 55.0f
+        )
+    );
+
+
+    // MIDDLE CLICK
+
+    DrawMouseLabelLine(
+        D2D1::Point2F(
+            wheelX + MOUSE_WHEEL_WIDTH / 2.0f,
+            wheelY + MOUSE_WHEEL_HEIGHT
+        ),
+
+        D2D1::Point2F(
+            x + MOUSE_WIDTH / 2.0f,
+            y + 205.0f
+        ),
+
+        L"MIDDLE CLICK",
+
+        D2D1::RectF(
+            x + MOUSE_WIDTH / 2.0f - 65.0f,
+            y + 210.0f,
+            x + MOUSE_WIDTH / 2.0f + 65.0f,
+            y + 235.0f
+        )
+    );
+
+
+    // SIDE BUTTON 1
+
+    DrawMouseLabelLine(
+        D2D1::Point2F(
+            sideX,
+            sideY1 + MOUSE_SIDE_HEIGHT / 2.0f
+        ),
+
+        D2D1::Point2F(
+            x - 105.0f,
+            sideY1 + MOUSE_SIDE_HEIGHT / 2.0f
+        ),
+
+        L"SIDE BUTTON 1",
+
+        D2D1::RectF(
+            x - 250.0f,
+            sideY1 + 12.0f,
+            x - 110.0f,
+            sideY1 + 52.0f
+        )
+    );
+
+
+    // SIDE BUTTON 2
+
+    DrawMouseLabelLine(
+        D2D1::Point2F(
+            sideX,
+            sideY2 + MOUSE_SIDE_HEIGHT / 2.0f
+        ),
+
+        D2D1::Point2F(
+            x - 105.0f,
+            sideY2 + MOUSE_SIDE_HEIGHT / 2.0f
+        ),
+
+        L"SIDE BUTTON 2",
+
+        D2D1::RectF(
+            x - 250.0f,
+            sideY2 + 12.0f,
+            x - 110.0f,
+            sideY2 + 52.0f
+        )
+    );
+
+
+    // ========================================================
+    // MOUSE TITLE
+    // ========================================================
+
+    DrawTextCentered(
+        L"GAMING MOUSE",
+        D2D1::RectF(
+            x - 100.0f,
+            y + MOUSE_HEIGHT + 10.0f,
+            x + MOUSE_WIDTH + 100.0f,
+            y + MOUSE_HEIGHT + 45.0f
+        ),
+        g_mouseLabelTextFormat,
+        g_whiteBrush
+    );
+
+
+    // ========================================================
+    // MOUSE STATUS
+    // ========================================================
+
+    std::wstring status;
+
+    if (g_mouse.leftPressed)
+        status = L"LEFT CLICK";
+
+    else if (g_mouse.rightPressed)
+        status = L"RIGHT CLICK";
+
+    else if (g_mouse.middlePressed)
+        status = L"MIDDLE CLICK";
+
+    else if (g_mouse.sideBackPressed)
+        status = L"SIDE BUTTON 1";
+
+    else if (g_mouse.sideForwardPressed)
+        status = L"SIDE BUTTON 2";
+
+    else if (upActive)
+        status = L"SCROLLING UP";
+
+    else if (downActive)
+        status = L"SCROLLING DOWN";
+
+    else
+        status = L"READY";
+
+
+    DrawTextCentered(
+        status,
+        D2D1::RectF(
+            x - 30.0f,
+            y + MOUSE_HEIGHT + 48.0f,
+            x + MOUSE_WIDTH + 30.0f,
+            y + MOUSE_HEIGHT + 78.0f
+        ),
+        g_mouseLabelTextFormat,
+        g_whiteBrush
+    );
+}
+
+
+// ============================================================
+// UPDATE SOCIAL BUTTON POSITIONS
+// ============================================================
+
+void UpdateButtonPositions()
+{
+    if (!g_renderTarget ||
+        !g_backgroundBrush ||
+        !g_whiteBrush ||
+        !g_blackBrush)
+    {
+        return;
+    }
+
 
 
     D2D1_SIZE_F size =
@@ -1805,7 +2752,9 @@ void UpdateButtonPositions()
 }
 
 
-
+// ============================================================
+// RENDER
+// ============================================================
 
 void Render()
 {
@@ -1825,8 +2774,6 @@ void Render()
         g_renderTarget->GetSize();
 
 
-
-
     g_renderTarget->FillRectangle(
         D2D1::RectF(
             0.0f,
@@ -1838,7 +2785,9 @@ void Render()
     );
 
 
-
+    // ========================================================
+    // TITLE
+    // ========================================================
 
     DrawTextCentered(
         L"KeyChecker",
@@ -1846,7 +2795,7 @@ void Render()
         D2D1::RectF(
             0.0f,
             35.0f,
-            size.width,
+            1150.0f,
             95.0f
         ),
 
@@ -1856,7 +2805,9 @@ void Render()
     );
 
 
-
+    // ========================================================
+    // KEYBOARD
+    // ========================================================
 
     for (
         const KeyboardKey& key :
@@ -1867,14 +2818,25 @@ void Render()
     }
 
 
+    // ========================================================
+    // GAMING MOUSE
+    // ========================================================
+
+    DrawGamingMouse();
+
+
+    // ========================================================
+    // SOCIAL BUTTONS
+    // ========================================================
 
     DrawSocialButtons();
 
 
-
+    // ========================================================
+    // COPYRIGHT
+    // ========================================================
 
     DrawCopyright();
-
 
 
     HRESULT hr =
@@ -1888,10 +2850,31 @@ void Render()
     {
         DiscardDeviceResources();
     }
+
+
+    // Keep scroll indicators updating.
+
+    if (
+        MouseFlashActive(
+            g_mouse.scrollUpTime
+        ) ||
+        MouseFlashActive(
+            g_mouse.scrollDownTime
+        )
+        )
+    {
+        InvalidateRect(
+            g_hWnd,
+            nullptr,
+            FALSE
+        );
+    }
 }
 
 
-
+// ============================================================
+// KEY STATE
+// ============================================================
 
 void SetKeyPressed(
     int virtualKey,
@@ -1936,6 +2919,9 @@ void SetKeyPressed(
 }
 
 
+// ============================================================
+// BUTTON HIT TEST
+// ============================================================
 
 int GetButtonAtPoint(
     float x,
@@ -1975,7 +2961,9 @@ int GetButtonAtPoint(
 }
 
 
-
+// ============================================================
+// BUTTON HOVER
+// ============================================================
 
 void UpdateButtonHover(
     int mouseX,
@@ -2052,7 +3040,9 @@ void UpdateButtonHover(
 }
 
 
-
+// ============================================================
+// OPEN SOCIAL URL
+// ============================================================
 
 void OpenButtonURL(
     int buttonIndex
@@ -2087,7 +3077,23 @@ void OpenButtonURL(
 }
 
 
+// ============================================================
+// MOUSE STATE INVALIDATION
+// ============================================================
 
+void UpdateMouseDisplay()
+{
+    InvalidateRect(
+        g_hWnd,
+        nullptr,
+        FALSE
+    );
+}
+
+
+// ============================================================
+// WINDOW PROCEDURE
+// ============================================================
 
 LRESULT CALLBACK WindowProc(
     HWND hwnd,
@@ -2098,7 +3104,9 @@ LRESULT CALLBACK WindowProc(
 {
     switch (message)
     {
-
+        // ========================================================
+        // CREATE
+        // ========================================================
 
     case WM_CREATE:
     {
@@ -2111,32 +3119,29 @@ LRESULT CALLBACK WindowProc(
     }
 
 
+    // ========================================================
+    // SIZE
+    // ========================================================
 
     case WM_SIZE:
     {
         if (g_renderTarget)
         {
-            UINT width =
-                LOWORD(lParam);
+            UINT width = LOWORD(lParam);
+            UINT height = HIWORD(lParam);
 
-            UINT height =
-                HIWORD(lParam);
-
-
-            if (
-                width > 0 &&
-                height > 0
-                )
+            if (width > 0 && height > 0)
             {
-                g_renderTarget->Resize(
-                    D2D1::SizeU(
-                        width,
-                        height
-                    )
+                HRESULT hr = g_renderTarget->Resize(
+                    D2D1::SizeU(width, height)
                 );
+
+                if (hr == D2DERR_RECREATE_TARGET)
+                {
+                    DiscardDeviceResources();
+                }
             }
         }
-
 
         InvalidateRect(
             hwnd,
@@ -2144,12 +3149,14 @@ LRESULT CALLBACK WindowProc(
             FALSE
         );
 
-
         return 0;
     }
 
 
 
+    // ========================================================
+    // MOUSE MOVE
+    // ========================================================
 
     case WM_MOUSEMOVE:
     {
@@ -2187,7 +3194,9 @@ LRESULT CALLBACK WindowProc(
     }
 
 
-
+    // ========================================================
+    // MOUSE LEAVE
+    // ========================================================
 
     case WM_MOUSELEAVE:
     {
@@ -2231,10 +3240,36 @@ LRESULT CALLBACK WindowProc(
     }
 
 
+    // ========================================================
+    // LEFT MOUSE BUTTON DOWN
+    // ========================================================
 
+    case WM_LBUTTONDOWN:
+    {
+        g_mouse.leftPressed = true;
+
+        SetCapture(hwnd);
+
+        UpdateMouseDisplay();
+
+        return 0;
+    }
+
+
+    // ========================================================
+    // LEFT MOUSE BUTTON UP
+    // ========================================================
 
     case WM_LBUTTONUP:
     {
+        g_mouse.leftPressed = false;
+
+        if (GetCapture() == hwnd)
+        {
+            ReleaseCapture();
+        }
+
+
         int mouseX =
             GET_X_LPARAM(lParam);
 
@@ -2259,22 +3294,208 @@ LRESULT CALLBACK WindowProc(
             OpenButtonURL(
                 buttonIndex
             );
-
-            return 0;
         }
 
 
-        break;
+        UpdateMouseDisplay();
+
+        return 0;
     }
 
 
+    // ========================================================
+    // RIGHT MOUSE BUTTON DOWN
+    // ========================================================
 
+    case WM_RBUTTONDOWN:
+    {
+        g_mouse.rightPressed = true;
+
+        SetCapture(hwnd);
+
+        UpdateMouseDisplay();
+
+        return 0;
+    }
+
+
+    // ========================================================
+    // RIGHT MOUSE BUTTON UP
+    // ========================================================
+
+    case WM_RBUTTONUP:
+    {
+        g_mouse.rightPressed = false;
+
+        if (GetCapture() == hwnd)
+        {
+            ReleaseCapture();
+        }
+
+        UpdateMouseDisplay();
+
+        return 0;
+    }
+
+
+    // ========================================================
+    // MIDDLE / SCROLL WHEEL CLICK DOWN
+    // ========================================================
+
+    case WM_MBUTTONDOWN:
+    {
+        g_mouse.middlePressed = true;
+
+        SetCapture(hwnd);
+
+        UpdateMouseDisplay();
+
+        return 0;
+    }
+
+
+    // ========================================================
+    // MIDDLE / SCROLL WHEEL CLICK UP
+    // ========================================================
+
+    case WM_MBUTTONUP:
+    {
+        g_mouse.middlePressed = false;
+
+        if (GetCapture() == hwnd)
+        {
+            ReleaseCapture();
+        }
+
+        UpdateMouseDisplay();
+
+        return 0;
+    }
+
+
+    // ========================================================
+    // SIDE MOUSE BUTTONS
+    // ========================================================
+
+    case WM_XBUTTONDOWN:
+    {
+        WORD button =
+            GET_XBUTTON_WPARAM(wParam);
+
+
+        if (
+            button ==
+            XBUTTON1
+            )
+        {
+            g_mouse.sideBackPressed =
+                true;
+        }
+        else if (
+            button ==
+            XBUTTON2
+            )
+        {
+            g_mouse.sideForwardPressed =
+                true;
+        }
+
+
+        SetCapture(hwnd);
+
+        UpdateMouseDisplay();
+
+        return TRUE;
+    }
+
+
+    // ========================================================
+    // SIDE MOUSE BUTTON UP
+    // ========================================================
+
+    case WM_XBUTTONUP:
+    {
+        WORD button =
+            GET_XBUTTON_WPARAM(wParam);
+
+
+        if (
+            button ==
+            XBUTTON1
+            )
+        {
+            g_mouse.sideBackPressed =
+                false;
+        }
+        else if (
+            button ==
+            XBUTTON2
+            )
+        {
+            g_mouse.sideForwardPressed =
+                false;
+        }
+
+
+        if (GetCapture() == hwnd)
+        {
+            ReleaseCapture();
+        }
+
+
+        UpdateMouseDisplay();
+
+        return TRUE;
+    }
+
+
+    // ========================================================
+    // MOUSE WHEEL
+    // ========================================================
+
+    case WM_MOUSEWHEEL:
+    {
+        short delta =
+            GET_WHEEL_DELTA_WPARAM(
+                wParam
+            );
+
+
+        if (delta > 0)
+        {
+            g_mouse.scrollUp = true;
+            g_mouse.scrollDown = false;
+
+            g_mouse.scrollUpTime =
+                GetTickCount();
+
+            g_mouse.scrollDownTime = 0;
+        }
+        else if (delta < 0)
+        {
+            g_mouse.scrollDown = true;
+            g_mouse.scrollUp = false;
+
+            g_mouse.scrollDownTime =
+                GetTickCount();
+
+            g_mouse.scrollUpTime = 0;
+        }
+
+
+        UpdateMouseDisplay();
+
+        return 0;
+    }
+
+
+    // ========================================================
+    // KEY DOWN
+    // ========================================================
 
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
     {
-
-
         if (
             (lParam &
                 (1 << 30)) == 0
@@ -2284,8 +3505,6 @@ LRESULT CALLBACK WindowProc(
                 static_cast<int>(
                     wParam
                     );
-
-
 
 
             if (
@@ -2320,8 +3539,6 @@ LRESULT CALLBACK WindowProc(
             }
 
 
-
-
             else if (
                 virtualKey ==
                 VK_CONTROL
@@ -2352,8 +3569,6 @@ LRESULT CALLBACK WindowProc(
                     );
                 }
             }
-
-
 
 
             else if (
@@ -2388,8 +3603,6 @@ LRESULT CALLBACK WindowProc(
             }
 
 
-
-
             else
             {
                 SetKeyPressed(
@@ -2404,7 +3617,9 @@ LRESULT CALLBACK WindowProc(
     }
 
 
-
+    // ========================================================
+    // KEY UP
+    // ========================================================
 
     case WM_KEYUP:
     case WM_SYSKEYUP:
@@ -2430,6 +3645,7 @@ LRESULT CALLBACK WindowProc(
                 false
             );
         }
+
         else if (
             virtualKey ==
             VK_CONTROL
@@ -2445,6 +3661,7 @@ LRESULT CALLBACK WindowProc(
                 false
             );
         }
+
         else if (
             virtualKey ==
             VK_MENU
@@ -2460,6 +3677,7 @@ LRESULT CALLBACK WindowProc(
                 false
             );
         }
+
         else
         {
             SetKeyPressed(
@@ -2473,7 +3691,9 @@ LRESULT CALLBACK WindowProc(
     }
 
 
-
+    // ========================================================
+    // PAINT
+    // ========================================================
 
     case WM_PAINT:
     {
@@ -2508,7 +3728,9 @@ LRESULT CALLBACK WindowProc(
     }
 
 
-
+    // ========================================================
+    // DESTROY
+    // ========================================================
 
     case WM_DESTROY:
     {
@@ -2528,7 +3750,9 @@ LRESULT CALLBACK WindowProc(
 }
 
 
-
+// ============================================================
+// ENTRY POINT
+// ============================================================
 
 int WINAPI wWinMain(
     HINSTANCE hInstance,
@@ -2537,8 +3761,6 @@ int WINAPI wWinMain(
     int nCmdShow
 )
 {
-
-
     HRESULT comResult =
         CoInitializeEx(
             nullptr,
@@ -2552,11 +3774,7 @@ int WINAPI wWinMain(
         );
 
 
-
-
     LoadCustomFont();
-
-
 
 
     const wchar_t CLASS_NAME[] =
@@ -2616,7 +3834,9 @@ int WINAPI wWinMain(
     }
 
 
-
+    // ========================================================
+    // LARGER WINDOW FOR MOUSE
+    // ========================================================
 
     HWND hwnd =
         CreateWindowExW(
@@ -2631,8 +3851,8 @@ int WINAPI wWinMain(
             CW_USEDEFAULT,
             CW_USEDEFAULT,
 
-            1400,
-            650,
+            1550,
+            700,
 
             nullptr,
             nullptr,
@@ -2667,8 +3887,6 @@ int WINAPI wWinMain(
     g_hWnd = hwnd;
 
 
-
-
     ShowWindow(
         hwnd,
         nCmdShow
@@ -2678,8 +3896,6 @@ int WINAPI wWinMain(
     UpdateWindow(
         hwnd
     );
-
-
 
 
     MSG msg{};
@@ -2705,10 +3921,14 @@ int WINAPI wWinMain(
     }
 
 
-
     DiscardDeviceResources();
 
+    SafeRelease(g_wicFactory);
+    SafeRelease(g_writeFactory);
+    SafeRelease(g_d2dFactory);
+
     UnloadCustomFont();
+
 
 
     if (comInitialized)
